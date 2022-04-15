@@ -3,7 +3,7 @@ SendMode Input
 SetWorkingDir, %A_ScriptDir%
 
 ShowMap(settings, mapHwnd1, imageData, gameMemoryData, ByRef uiData) {
-    
+
     scale:= settings["scale"]
     leftMargin:= settings["leftMargin"]
     topMargin:= settings["topMargin"]
@@ -22,25 +22,10 @@ ShowMap(settings, mapHwnd1, imageData, gameMemoryData, ByRef uiData) {
         serverScale := settings["serverScale"]
         opacity:= settings["centerModeOpacity"]
     } else {
-        serverScale := 2 
+        serverScale := 2
     }
 
-    ; WriteLog("maxGuiWidth := " maxGuiWidth)
-    ; WriteLog("scale := " scale)
-    ; WriteLog("leftMargin := " leftMargin)
-    ; WriteLog("topMargin := " topMargin)
-    ; WriteLog("opacity := " opacity)
-    ; WriteLog(imageData["sFile"])
-    ; WriteLog(imageData["leftTrimmed"])
-    ; WriteLog(imageData["topTrimmed"])
-    ; WriteLog(imageData["mapOffsetX"])
-    ; WriteLog(imageData["mapOffsety"])
-    ; WriteLog(imageData["mapwidth"])
-    ; WriteLog(imageData["mapheight"])
-    ; WriteLog(imageData["prerotated"])
-
-    ; WriteLog(gameMemoryData["xPos"])
-    ; WriteLog(gameMemoryData["yPos"])
+    ; logInitMapSettings()
 
     StartTime := A_TickCount
     Angle := 45
@@ -77,35 +62,19 @@ ShowMap(settings, mapHwnd1, imageData, gameMemoryData, ByRef uiData) {
     hbm := CreateDIBSection(rotatedWidth, rotatedHeight)
     hdc := CreateCompatibleDC()
     obm := SelectObject(hdc, hbm)
-    Gdip_SetSmoothingMode(G, 4) 
+    Gdip_SetSmoothingMode(G, 4)
     G := Gdip_GraphicsFromHDC(hdc)
-    
+
     if (!imageData["prerotated"]) {
         pBitmap := Gdip_RotateBitmapAtCenter(pBitmap, Angle) ; rotates bitmap for 45 degrees. Disposes of pBitmap.
     }
 
-    if (settings["centerMode"]) {
-        ; get relative position of player in world
-        ; xpos is absolute world pos in game
-        ; each map has offset x and y which is absolute world position
-        xPosDot := ((gameMemoryData["xPos"] - imageData["mapOffsetX"]) * serverScale) + padding
-        yPosDot := ((gameMemoryData["yPos"] - imageData["mapOffsetY"]) * serverScale) + padding
+    drawMapImage()
 
-        correctedPos := findNewPos(xPosDot, yPosDot, (Width/2), (Height/2), scaledWidth, scaledHeight, scale)
-        xPosDot := correctedPos["x"]
-        yPosDot := correctedPos["y"]
-
-        Gdip_DrawImage(G, pBitmap, 0, 0, scaledWidth, scaledHeight, 0, 0, RWidth, RHeight, opacity)
-
-        UpdateLayeredWindow(mapHwnd1, hdc, 0, 0, scaledWidth, scaledHeight)
-        ; win move is now handled in movePlayerMap.ahk
-    } else {
-        Gdip_DrawImage(G, pBitmap, 0, 0, scaledWidth, scaledHeight, 0, 0, RWidth, RHeight, opacity)
-        UpdateLayeredWindow(mapHwnd1, hdc, , , scaledWidth, scaledHeight)
-        WinGetPos, windowLeftMargin, windowTopMargin , gameWidth, gameHeight, %gameWindowId% 
-        WinMove, ahk_id %mapHwnd1%,, windowLeftMargin+leftMargin, windowTopMargin+topMargin
-        WinMove, ahk_id %unitHwnd1%,, windowLeftMargin+leftMargin, windowTopMargin+topMargin
+    if (!settings["centerMode"]) {
+        moveMapImage
     }
+    ; win move is now handled in movePlayerMap.ahk
 
     ; WriteLog(scaledWidth " " scaledHeight " " RWidth " " RHeight " " xPosDot " " yPosDot)
     ; seed := gameMemoryData["mapSeed"]
@@ -121,4 +90,35 @@ ShowMap(settings, mapHwnd1, imageData, gameMemoryData, ByRef uiData) {
     ElapsedTime := A_TickCount - StartTime
     ; WriteLogDebug("Drew map " ElapsedTime " ms taken")
     uiData := { "scaledWidth": scaledWidth, "scaledHeight": scaledHeight, "sizeWidth": Width, "sizeHeight": Height, "rotatedWidth": rotatedWidth, "rotatedHeight": rotatedHeight }
+
+}
+
+drawMapImage() {
+    Gdip_DrawImage(G, pBitmap, 0, 0, scaledWidth, scaledHeight, 0, 0, RWidth, RHeight, opacity)
+    UpdateLayeredWindow(mapHwnd1, hdc, 0, 0, scaledWidth, scaledHeight)
+}
+
+moveMapImage() {
+    WinGetPos, windowLeftMargin, windowTopMargin , gameWidth, gameHeight, %gameWindowId%
+    WinMove, ahk_id %mapHwnd1%,, windowLeftMargin+leftMargin, windowTopMargin+topMargin
+    WinMove, ahk_id %unitHwnd1%,, windowLeftMargin+leftMargin, windowTopMargin+topMargin
+}
+
+logInitMapSettings() {
+    WriteLog("maxGuiWidth := " maxGuiWidth)
+    WriteLog("scale := " scale)
+    WriteLog("leftMargin := " leftMargin)
+    WriteLog("topMargin := " topMargin)
+    WriteLog("opacity := " opacity)
+    WriteLog(imageData["sFile"])
+    WriteLog(imageData["leftTrimmed"])
+    WriteLog(imageData["topTrimmed"])
+    WriteLog(imageData["mapOffsetX"])
+    WriteLog(imageData["mapOffsety"])
+    WriteLog(imageData["mapwidth"])
+    WriteLog(imageData["mapheight"])
+    WriteLog(imageData["prerotated"])
+
+    WriteLog(gameMemoryData["xPos"])
+    WriteLog(gameMemoryData["yPos"])
 }
